@@ -43,31 +43,9 @@ float livingroomData[]  = {0, 0};
 float nurseryData[]     = {0, 0};
 float kitchenData[]     = {0, 0};
 
-/*****************************************( Setup )****************************************/
+/****************************************(Helper)******************************************/
 
-void wifiSetup() {
-
-  // Set WIFI module to STA mode
-  WiFi.mode(WIFI_STA);
-
-  // Connect
-  Serial.printf("[WIFI] Connecting to %s ", WIFI_SSID);
-  WiFi.hostname(hostname);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-
-  // Wait
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(100);
-  }
-  Serial.println();
-  WiFi.setAutoReconnect(1);
-
-  // Connected!
-  Serial.printf("[WIFI] STATION Mode, SSID: %s, IP address: %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
-}
-
-void parseJsonToArray(String data, float arrayX[]) {
+void parseJsonTempDataToArray(String data, float arrayX[]) {
        // Allocate JsonBuffer, see http://arduinojson.org/assistant/
       StaticJsonBuffer<200> jsonBuffer;
       // Parse JSON object
@@ -79,75 +57,6 @@ void parseJsonToArray(String data, float arrayX[]) {
       arrayX[0] = root["DHT11"]["Temperature"].as<float>();
       arrayX[1] = root["DHT11"]["Humidity"].as<float>();
 }
-
-void mqttSetup() {
-  
-  //topic, data, data is continuing
-  mqtt.onData([](String topic, String data, bool cont) {
-    if (topic == bedroomTopic) {
-      Serial.printf("Bedroom Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
-      parseJsonToArray(String(data.c_str()), bedroomData);
-      displayBedRoomData();
-
-    } else if (topic == livingroomTopic) {
-      Serial.printf("Livingroom Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
-      parseJsonToArray(String(data.c_str()), livingroomData);
-      displayLivingRoomData();
-      
-    } else if (topic == nurseryTopic) {
-      Serial.printf("Nursery Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
-      parseJsonToArray(String(data.c_str()), nurseryData);
-      displayNurseryData();
-      
-    } else if (topic == kitchenTopic) {
-      Serial.printf("Kitchen Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
-      parseJsonToArray(String(data.c_str()), kitchenData);
-      displayKitchenData();
-    }
-  });
-
-  mqtt.onSubscribe([](int sub_id) {
-    Serial.printf("Subscribe topic id: %d ok\r\n", sub_id);
-  });
-
-  mqtt.onConnect([]() {
-    // QOS 1 should let the data in the Queue
-    Serial.printf("MQTT: Connected\r\n");
-
-    mqtt.subscribe(bedroomTopic, 1);
-    mqtt.subscribe(livingroomTopic, 1);
-    mqtt.subscribe(nurseryTopic, 1);
-    mqtt.subscribe(kitchenTopic, 1);
-  });
-
-  mqtt.begin("mqtt://" + MQTT_SERVER + ":" + MQTT_PORT + "#" + hostname);
-}
-
-void resetScreen() {
-  display.fillScreen(GxEPD_WHITE);
-  display.drawBitmap(gImage_grid, 0, 0, 400 , 250, GxEPD_BLACK);
-  display.update();
-}
-
-void setup()
-{
-  Serial.begin(115200);
-  wifiSetup();
-  mqttSetup();
-  
-  display.init();
-  display.setRotation(90);                   
-  resetScreen();
-             
-  display.setTextColor(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-
-  timeClient.begin();
-  timeClient.setTimeOffset(3600);
-  timeClient.update();
-}
-
-/****************************************(Helper)******************************************/
 
 WiFiClient getOpenWeatherData() {
   // ToDo: Exception handling
@@ -187,6 +96,97 @@ WiFiClient getOpenWeatherData() {
   return client;
 }
 
+/*****************************************( Setup )****************************************/
+
+void setupWIFI() {
+
+  // Set WIFI module to STA mode
+  WiFi.mode(WIFI_STA);
+
+  // Connect
+  Serial.printf("[WIFI] Connecting to %s ", WIFI_SSID);
+  WiFi.hostname(hostname);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+  // Wait
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(100);
+  }
+  Serial.println();
+  WiFi.setAutoReconnect(1);
+
+  // Connected!
+  Serial.printf("[WIFI] STATION Mode, SSID: %s, IP address: %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+}
+
+void setupScreen() {
+  display.init();
+  display.setRotation(90);                   
+  display.fillScreen(GxEPD_WHITE);
+  display.drawBitmap(gImage_grid, 0, 0, 400 , 250, GxEPD_BLACK);
+  display.update();
+  display.setTextColor(GxEPD_BLACK);
+  display.setFont(&FreeMonoBold9pt7b);
+}
+
+
+void setupMQTT() {
+  
+  //topic, data, data is continuing
+  mqtt.onData([](String topic, String data, bool cont) {
+    if (topic == bedroomTopic) {
+      Serial.printf("Bedroom Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
+      parseJsonTempDataToArray(String(data.c_str()), bedroomData);
+      displayBedRoomData();
+
+    } else if (topic == livingroomTopic) {
+      Serial.printf("Livingroom Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
+      parseJsonTempDataToArray(String(data.c_str()), livingroomData);
+      displayLivingRoomData();
+      
+    } else if (topic == nurseryTopic) {
+      Serial.printf("Nursery Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
+      parseJsonTempDataToArray(String(data.c_str()), nurseryData);
+      displayNurseryData();
+      
+    } else if (topic == kitchenTopic) {
+      Serial.printf("Kitchen Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
+      parseJsonTempDataToArray(String(data.c_str()), kitchenData);
+      displayKitchenData();
+    }
+  });
+
+  mqtt.onSubscribe([](int sub_id) {
+    Serial.printf("Subscribe topic id: %d ok\r\n", sub_id);
+  });
+
+  mqtt.onConnect([]() {
+    // QOS 1 should let the data in the Queue
+    Serial.printf("MQTT: Connected\r\n");
+
+    mqtt.subscribe(bedroomTopic, 1);
+    mqtt.subscribe(livingroomTopic, 1);
+    mqtt.subscribe(nurseryTopic, 1);
+    mqtt.subscribe(kitchenTopic, 1);
+  });
+
+  mqtt.begin("mqtt://" + MQTT_SERVER + ":" + MQTT_PORT + "#" + hostname);
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  
+  setupWIFI();
+  setupMQTT();
+  setupScreen();
+  
+  timeClient.begin();
+  timeClient.setTimeOffset(3600);
+  timeClient.update();
+}
+
 /*************************************(Hauptprogramm)**************************************/
 
 void displayWifiStatus() {
@@ -196,7 +196,6 @@ void displayWifiStatus() {
   } else {
     display.drawBitmap(gImage_wifi, 345, 255, 50 , 39, GxEPD_BLACK);
   }
-  //display.updateWindow(wifiBox[0], wifiBox[1], wifiBox[2], wifiBox[3], true);
 }
 
 bool displayTime() {
@@ -227,7 +226,7 @@ void displayOpenWeatherData() {
     return;
   }
 
-  //display.fillRect(openWeatherBox, GxEPD_WHITE);
+  display.fillRect(openWeatherBox[0], openWeatherBox[1], openWeatherBox[2], openWeatherBox[3], GxEPD_WHITE);
   display.setCursor(35, 15);
   display.print("Weather in Berlin");
   // Extract values
