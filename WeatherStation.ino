@@ -23,7 +23,7 @@
 #include <Fonts/FreeMonoBold9pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
 
-/**************************(Definieren der genutzten Variabeln)****************************/
+/************************************( Variables )**************************************/
 
 String hostname = "WeatherStation01";
 // MQTT
@@ -36,26 +36,25 @@ NTPClient timeClient(ntpUDP);
 
 GxIO_Class io(SPI, SS, 0, 2);  //SPI,SS,DC,RST
 GxEPD_Class display(io, 2, 4);  //io,RST,BUSY
-/*****************************************( Rooms )****************************************/
 
 float bedroomData[]     = {0, 0};
 float livingroomData[]  = {0, 0};
 float nurseryData[]     = {0, 0};
 float kitchenData[]     = {0, 0};
 
-/****************************************(Helper)******************************************/
+/***************************************( Helper )*****************************************/
 
 void parseJsonTempDataToArray(String data, float arrayX[]) {
-       // Allocate JsonBuffer, see http://arduinojson.org/assistant/
-      StaticJsonBuffer<200> jsonBuffer;
-      // Parse JSON object
-      JsonObject& root = jsonBuffer.parseObject(data);
-      if (!root.success()) {
-        Serial.println("Parsing failed!");
-        return;
-      }
-      arrayX[0] = root["DHT11"]["Temperature"].as<float>();
-      arrayX[1] = root["DHT11"]["Humidity"].as<float>();
+  // Allocate JsonBuffer, see http://arduinojson.org/assistant/
+  StaticJsonBuffer<200> jsonBuffer;
+  // Parse JSON object
+  JsonObject& root = jsonBuffer.parseObject(data);
+  if (!root.success()) {
+    Serial.println("Parsing failed!");
+    return;
+  }
+  arrayX[0] = root["DHT11"]["Temperature"].as<float>();
+  arrayX[1] = root["DHT11"]["Humidity"].as<float>();
 }
 
 WiFiClient getOpenWeatherData() {
@@ -90,9 +89,6 @@ WiFiClient getOpenWeatherData() {
     Serial.println("Invalid response");
   }
 
-  // Disconnect
-  //client.stop();
-
   return client;
 }
 
@@ -122,7 +118,7 @@ void setupWIFI() {
 
 void setupScreen() {
   display.init();
-  display.setRotation(90);                   
+  display.setRotation(90);
   display.fillScreen(GxEPD_WHITE);
   display.drawBitmap(gImage_grid, 0, 0, 400 , 250, GxEPD_BLACK);
   display.update();
@@ -130,9 +126,8 @@ void setupScreen() {
   display.setFont(&FreeMonoBold9pt7b);
 }
 
-
 void setupMQTT() {
-  
+
   //topic, data, data is continuing
   mqtt.onData([](String topic, String data, bool cont) {
     if (topic == bedroomTopic) {
@@ -144,12 +139,12 @@ void setupMQTT() {
       Serial.printf("Livingroom Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
       parseJsonTempDataToArray(String(data.c_str()), livingroomData);
       displayLivingRoomData();
-      
+
     } else if (topic == nurseryTopic) {
       Serial.printf("Nursery Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
       parseJsonTempDataToArray(String(data.c_str()), nurseryData);
       displayNurseryData();
-      
+
     } else if (topic == kitchenTopic) {
       Serial.printf("Kitchen Data received, topic: %s, data: %s\r\n", topic.c_str(), data.c_str());
       parseJsonTempDataToArray(String(data.c_str()), kitchenData);
@@ -170,24 +165,23 @@ void setupMQTT() {
     mqtt.subscribe(nurseryTopic, 1);
     mqtt.subscribe(kitchenTopic, 1);
   });
-
   mqtt.begin("mqtt://" + MQTT_SERVER + ":" + MQTT_PORT + "#" + hostname);
 }
 
 void setup()
 {
   Serial.begin(115200);
-  
+
   setupWIFI();
   setupMQTT();
   setupScreen();
-  
+
   timeClient.begin();
   timeClient.setTimeOffset(3600);
   timeClient.update();
 }
 
-/*************************************(Hauptprogramm)**************************************/
+/**********************************( Display Functions )***********************************/
 
 void displayWifiStatus() {
   display.fillRect(wifiBox[0], wifiBox[1], wifiBox[2], wifiBox[3], GxEPD_WHITE);
@@ -206,7 +200,7 @@ bool displayTime() {
     display.setFont(&FreeMonoBold24pt7b);
     // Display time without seconds
     display.print(String(timeClient.getFormattedTime()).substring(0, 5));
-    
+
     display.setFont(&FreeMonoBold9pt7b);
     return true;
   }
@@ -221,6 +215,8 @@ void displayOpenWeatherData() {
 
   // Parse JSON object
   JsonObject& root = jsonBuffer.parseObject(client);
+  //Disconnect
+  client.stop();
   if (!root.success()) {
     Serial.println("Parsing failed!");
     return;
@@ -246,8 +242,33 @@ void displayOpenWeatherData() {
   display.print(" Kmh");
 
   displayWeatherIcon(root["weather"][0]["icon"]);
-  display.setCursor(10, 130);
+  display.setCursor(15, 130);
   display.print(root["weather"][0]["description"].as<String>());
+}
+
+void displayWeatherIcon(String weather) {
+  // see https://openweathermap.org/weather-conditions
+  if (weather.startsWith("01")) {
+    display.drawBitmap(gImage_sun, 10, 25, 100 , 96, GxEPD_BLACK);
+  } else if (weather.startsWith("02")) {
+    display.drawBitmap(gImage_few_clouds, 10, 25, 100 , 95, GxEPD_BLACK);
+  } else if (weather.startsWith("03")) {
+    display.drawBitmap(gImage_cloudy, 10, 25, 100 , 80, GxEPD_BLACK);
+  } else if (weather.startsWith("04")) {
+    display.drawBitmap(gImage_cloudy, 10, 25, 100 , 80, GxEPD_BLACK);
+  } else if (weather.startsWith("09")) {
+    display.drawBitmap(gImage_shower_rain, 10, 25, 100 , 85, GxEPD_BLACK);
+  } else if (weather.startsWith("10")) {
+    display.drawBitmap(gImage_rain, 10, 25, 100 , 85, GxEPD_BLACK);
+  } else if (weather.startsWith("11")) {
+    display.drawBitmap(gImage_thunderstorm, 10, 25, 100 , 85, GxEPD_BLACK);
+  } else if (weather.startsWith("13")) {
+    display.drawBitmap(gImage_snow, 10, 25, 100 , 85, GxEPD_BLACK);
+  } else if (weather.startsWith("50")) {
+    display.drawBitmap(gImage_fog, 10, 25, 100 , 60, GxEPD_BLACK);
+  } else {
+    display.drawBitmap(gImage_unknown, 10, 25, 100 , 70, GxEPD_BLACK);
+  }
 }
 
 void displayLivingRoomData() {
@@ -264,7 +285,6 @@ void displayLivingRoomData() {
   display.print("Hum: ");
   display.print(livingroomData[1], 0);
   display.print(" %");
-  
 }
 
 void displayBedRoomData() {
@@ -297,7 +317,6 @@ void displayNurseryData() {
   display.print("Hum: ");
   display.print(nurseryData[1], 0);
   display.print(" %");
-
 }
 
 void displayKitchenData() {
@@ -316,30 +335,7 @@ void displayKitchenData() {
   display.print(" %");
 }
 
-void displayWeatherIcon(String weather) {
-  // see https://openweathermap.org/weather-conditions
-  if (weather.startsWith("01")) {
-    display.drawBitmap(gImage_sun, 10, 25, 100 , 96, GxEPD_BLACK);
-  } else if (weather.startsWith("02")) {
-    display.drawBitmap(gImage_few_clouds, 10, 25, 100 , 95, GxEPD_BLACK);
-  } else if (weather.startsWith("03")) {
-    display.drawBitmap(gImage_cloudy, 10, 25, 100 , 80, GxEPD_BLACK);
-  } else if (weather.startsWith("04")) {
-    display.drawBitmap(gImage_cloudy, 10, 25, 100 , 80, GxEPD_BLACK);
-  } else if (weather.startsWith("09")) {
-    display.drawBitmap(gImage_shower_rain, 10, 25, 100 , 85, GxEPD_BLACK);
-  } else if (weather.startsWith("10")) {
-    display.drawBitmap(gImage_rain, 10, 25, 100 , 85, GxEPD_BLACK);
-  } else if (weather.startsWith("11")) {
-    display.drawBitmap(gImage_thunderstorm, 10, 25, 100 , 85, GxEPD_BLACK);
-  } else if (weather.startsWith("13")) {
-    display.drawBitmap(gImage_snow, 10, 25, 100 , 85, GxEPD_BLACK);
-  } else if (weather.startsWith("50")) {
-    display.drawBitmap(gImage_fog, 10, 25, 100 , 60, GxEPD_BLACK);
-  } else {
-    display.drawBitmap(gImage_unknown, 10, 25, 100 , 70, GxEPD_BLACK);
-  }
-}
+/**************************************( Loop )***************************************/
 
 void loop()
 {
@@ -351,8 +347,7 @@ void loop()
     displayOpenWeatherData();
     display.update();
   }
-  
+  // Power Saving
   delay(200);
-
 }
 
