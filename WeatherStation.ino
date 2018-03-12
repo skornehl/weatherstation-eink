@@ -1,28 +1,22 @@
-#define DISABLE_DIAGNOSTIC_OUTPUT
-
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include "credentials.h"
-
-#include <ArduinoJson.h>
-
-//https://github.com/tuanpmt/ESP8266MQTTClient/blob/master/examples/MQTTClient/MQTTClient.ino
-#include <ESP8266MQTTClient.h>
-
-//https://github.com/arduino-libraries/NTPClient/blob/master/examples/Basic/Basic.ino
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
+// Display Libs
+#define DISABLE_DIAGNOSTIC_OUTPUT
 #include <GxEPD.h>
 #include <GxGDEW042T2/GxGDEW042T2.cpp>
 #include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
 #include <GxIO/GxIO.cpp>
 
-#include "icons.h"
-
+#include <ArduinoJson.h>
+#include <ESP8266MQTTClient.h>
 #include <Fonts/FreeMonoBold9pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
 
+#include "credentials.h"
+#include "icons.h"
 /************************************( Variables )**************************************/
 
 String hostname = "WeatherStation01";
@@ -88,7 +82,6 @@ WiFiClient getOpenWeatherData() {
   if (!client.find(endOfHeaders)) {
     Serial.println("Invalid response");
   }
-
   return client;
 }
 
@@ -102,7 +95,7 @@ void setupWIFI() {
   // Connect
   Serial.printf("[WIFI] Connecting to %s ", WIFI_SSID);
   WiFi.hostname(hostname);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  WiFi.begin((const char*)WIFI_SSID, (const char*)WIFI_PASS);
 
   // Wait
   while (WiFi.status() != WL_CONNECTED) {
@@ -157,9 +150,12 @@ void setupMQTT() {
   });
 
   mqtt.onConnect([]() {
-    // QOS 1 should let the data in the Queue
     Serial.printf("MQTT: Connected\r\n");
 
+    // QOS Level
+    // At most once (0)
+    // At least once (1)
+    // Exactly once (2)
     mqtt.subscribe(bedroomTopic, 1);
     mqtt.subscribe(livingroomTopic, 1);
     mqtt.subscribe(nurseryTopic, 1);
@@ -348,6 +344,6 @@ void loop()
     display.update();
   }
   // Power Saving
-  delay(200);
+  delay(1000);
 }
 
