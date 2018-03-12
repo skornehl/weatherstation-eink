@@ -15,26 +15,8 @@
 #include <Fonts/FreeMonoBold9pt7b.h>
 #include <Fonts/FreeMonoBold24pt7b.h>
 
-#include "credentials.h"
+#include "variables.h"
 #include "icons.h"
-/************************************( Variables )**************************************/
-
-String hostname = "WeatherStation01";
-// MQTT
-MQTTClient mqtt;
-
-int minute = 0;
-
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP);
-
-GxIO_Class io(SPI, SS, 0, 2);  //SPI,SS,DC,RST
-GxEPD_Class display(io, 2, 4);  //io,RST,BUSY
-
-float bedroomData[]     = {0, 0};
-float livingroomData[]  = {0, 0};
-float nurseryData[]     = {0, 0};
-float kitchenData[]     = {0, 0};
 
 /***************************************( Helper )*****************************************/
 
